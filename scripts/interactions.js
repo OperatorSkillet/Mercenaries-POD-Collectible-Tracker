@@ -12,14 +12,17 @@ export function initInteractions(data) {
     const lightbox = document.getElementById("lightbox");
     const lightboxImage = document.getElementById("lightbox-image");
 
-    // Open lightbox when clicking sidebar image
+    // Detect touch device — hide tooltip on mobile since there's no hover
+    const isTouchDevice = () => window.matchMedia("(pointer: coarse)").matches;
+
+    // Open lightbox when clicking/tapping sidebar image
     sidebarImage.addEventListener("click", () => {
         lightboxImage.src = sidebarImage.src;
         lightboxImage.alt = sidebarImage.alt;
         lightbox.classList.add("open");
     });
 
-    // Close lightbox when clicking anywhere on it
+    // Close lightbox when clicking/tapping anywhere on it
     lightbox.addEventListener("click", () => {
         lightbox.classList.remove("open");
     });
@@ -35,6 +38,7 @@ export function initInteractions(data) {
         if (status === "unsure") return "⚠️ Unsure";
         return "❌ Not Collected";
     }
+
     function getStatusDisplay(status) {
         if (status === "collected") return '<span style="color:#4caf50">✔️ Collected</span>';
         if (status === "unsure") return '<span style="color:#ffd900">⚠️ Unsure</span>';
@@ -57,6 +61,40 @@ export function initInteractions(data) {
         sidebar.classList.remove("open");
     }
 
+    function cycleStatus(item, circle) {
+        item.status = getNextStatus(item.status);
+
+        circle.classList.remove("collected", "unsure");
+
+        const existingMarker = document.querySelector(`[data-marker="${circle.id}"]`);
+        if (existingMarker) existingMarker.remove();
+
+        if (item.status === "collected") {
+            circle.classList.add("collected");
+        } else if (item.status === "unsure") {
+            const svgNS = "http://www.w3.org/2000/svg";
+            const marker = document.createElementNS(svgNS, "text");
+            marker.textContent = "?";
+            const bbox = circle.getBBox();
+            marker.setAttribute("x", bbox.x + bbox.width / 2);
+            marker.setAttribute("y", bbox.y + bbox.height / 2);
+            marker.setAttribute("text-anchor", "middle");
+            marker.setAttribute("dominant-baseline", "middle");
+            marker.setAttribute("class", "unsure");
+            marker.setAttribute("data-marker", circle.id);
+            circle.closest('g').appendChild(marker);
+        }
+
+        // Update sidebar if open and showing this item
+        if (sidebar.classList.contains("open") && sidebarName.textContent === item.name) {
+            sidebarStatus.textContent = getStatusLabel(item.status);
+            sidebarStatus.dataset.status = item.status;
+        }
+
+        if (window.updateTracker) window.updateTracker();
+        saveState();
+    }
+
     sidebarClose.addEventListener("click", closeSidebar);
 
     document.addEventListener("keydown", (e) => {
@@ -72,6 +110,8 @@ export function initInteractions(data) {
         });
     });
 
+    // ── Per-circle event setup ───────────────────────────────────────────────
+
     Object.keys(data).forEach(category => {
 
         const categoryData = data[category];
@@ -82,16 +122,26 @@ export function initInteractions(data) {
         circles.forEach(circle => {
 
             const item = items.find(i => i.id === circle.id);
-
-            if (!item) {
-                return;
-            }
+            if (!item) return;
 
             if (item.status === "collected") circle.classList.add("collected");
+            if (item.status === "unsure") {
+                const svgNS = "http://www.w3.org/2000/svg";
+                const marker = document.createElementNS(svgNS, "text");
+                marker.textContent = "?";
+                const bbox = circle.getBBox();
+                marker.setAttribute("x", bbox.x + bbox.width / 2);
+                marker.setAttribute("y", bbox.y + bbox.height / 2);
+                marker.setAttribute("text-anchor", "middle");
+                marker.setAttribute("dominant-baseline", "middle");
+                marker.setAttribute("class", "unsure");
+                marker.setAttribute("data-marker", circle.id);
+                circle.closest('g').appendChild(marker);
+            }
 
             circle.style.cursor = "pointer";
 
-            // Left click — open sidebar
+            // ── Mouse: left click → sidebar ──────────────────────────────────
             circle.addEventListener("click", (e) => {
                 e.stopPropagation();
                 if (sidebar.classList.contains("open") && sidebarName.textContent === item.name) {
@@ -101,52 +151,24 @@ export function initInteractions(data) {
                 }
             });
 
-            // Right click — cycle status
+            // ── Mouse: right click → cycle status ───────────────────────────
             circle.addEventListener("contextmenu", (e) => {
                 e.preventDefault();
                 e.stopPropagation();
 
-                item.status = getNextStatus(item.status);
+                cycleStatus(item, circle);
 
-                circle.classList.remove("collected", "unsure");
-
-                const existingMarker = document.querySelector(`[data-marker="${circle.id}"]`);
-                if (existingMarker) existingMarker.remove();
-
-                if (item.status === "collected") {
-                    circle.classList.add("collected");
-                } else if (item.status === "unsure") {
-                    const svgNS = "http://www.w3.org/2000/svg";
-                    const marker = document.createElementNS(svgNS, "text");
-                    marker.textContent = "?";
-                    const bbox = circle.getBBox();
-                    marker.setAttribute("x", bbox.x + bbox.width / 2);
-                    marker.setAttribute("y", bbox.y + bbox.height / 2);
-                    marker.setAttribute("text-anchor", "middle");
-                    marker.setAttribute("dominant-baseline", "middle");
-                    marker.setAttribute("class", "unsure");
-                    marker.setAttribute("data-marker", circle.id);
-                    circle.closest('g').appendChild(marker);
+                if (!isTouchDevice()) {
+                    tooltip.innerHTML = `
+                        <strong>${item.name}</strong><br>
+                        ${getStatusDisplay(item.status)}<br>
+                        ${item.description}`;
                 }
-
-                // Update sidebar if it's open and showing this item
-                if (sidebar.classList.contains("open") && sidebarName.textContent === item.name) {
-                    sidebarStatus.textContent = getStatusLabel(item.status);
-                    sidebarStatus.dataset.status = item.status;
-                }
-
-                // Update tooltip
-                tooltip.innerHTML = `
-                    <strong>${item.name}</strong><br>
-                    ${getStatusDisplay(item.status)}<br>
-                    ${item.description}`;
-
-                    // Update tracker counts
-                    if (window.updateTracker) window.updateTracker();
-                    saveState();
             });
 
+            // ── Mouse: hover tooltip ─────────────────────────────────────────
             circle.addEventListener("mouseenter", () => {
+                if (isTouchDevice()) return;
                 tooltip.style.display = "block";
                 tooltip.innerHTML = `
                     <strong>${item.name}</strong><br>
@@ -155,6 +177,7 @@ export function initInteractions(data) {
             });
 
             circle.addEventListener("mousemove", (e) => {
+                if (isTouchDevice()) return;
                 tooltip.style.left = e.pageX + 12 + "px";
                 tooltip.style.top = e.pageY + 12 + "px";
             });
@@ -162,10 +185,58 @@ export function initInteractions(data) {
             circle.addEventListener("mouseleave", () => {
                 tooltip.style.display = "none";
             });
+
+            // ── Touch: tap → sidebar, long press → cycle status ─────────────
+            let longPressTimer = null;
+            let touchMoved = false;
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            circle.addEventListener("touchstart", (e) => {
+                touchMoved = false;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+
+                longPressTimer = setTimeout(() => {
+                    if (!touchMoved) {
+                        cycleStatus(item, circle);
+
+                        // Brief visual flash so user knows it registered
+                        circle.style.opacity = "0.4";
+                        setTimeout(() => { circle.style.opacity = ""; }, 180);
+                    }
+                }, 500); // 500ms hold = long press
+
+            }, { passive: true });
+
+            circle.addEventListener("touchmove", (e) => {
+                const dx = Math.abs(e.touches[0].clientX - touchStartX);
+                const dy = Math.abs(e.touches[0].clientY - touchStartY);
+                if (dx > 8 || dy > 8) {
+                    touchMoved = true;
+                    clearTimeout(longPressTimer);
+                }
+            }, { passive: true });
+
+            circle.addEventListener("touchend", (e) => {
+                clearTimeout(longPressTimer);
+
+                if (!touchMoved) {
+                    // Short tap → open/close sidebar
+                    e.preventDefault(); // prevent ghost mouse click
+                    e.stopPropagation();
+                    if (sidebar.classList.contains("open") && sidebarName.textContent === item.name) {
+                        closeSidebar();
+                    } else {
+                        openSidebar(item, displayName);
+                    }
+                }
+            }, { passive: false });
+
         });
     });
 
-// --- Tracker ---
+    // ── Tracker ──────────────────────────────────────────────────────────────
 
     const trackerBtns = document.querySelectorAll(".tracker-btn");
 
@@ -188,7 +259,7 @@ export function initInteractions(data) {
 
             btn.querySelector(".count").textContent = `${collected} / ${total}`;
         });
-        // Update map total counters
+
         ["south", "north"].forEach(map => {
             let total = 0;
             let collected = 0;
@@ -217,21 +288,16 @@ export function initInteractions(data) {
 
         btn.addEventListener("click", () => {
             const isHidden = btn.classList.toggle("hidden-category");
-
-            // Toggle visibility on both maps' <g> groups for this category
             document.querySelectorAll(`#${category}`).forEach(group => {
                 group.style.visibility = isHidden ? "hidden" : "visible";
             });
         });
     });
 
-    // Initial tracker render
     updateTracker();
-
-    // Expose updateTracker so switchMap can call it
     window.updateTracker = updateTracker;
 
-    // --- Reset ---
+    // ── Reset ────────────────────────────────────────────────────────────────
 
     const resetBtn = document.getElementById("reset-btn");
     const resetModal = document.getElementById("reset-modal");
@@ -253,14 +319,11 @@ export function initInteractions(data) {
     resetConfirm.addEventListener("click", () => {
         const activeMap = getActiveMap();
 
-        // Reset all items on the active map
         Object.keys(data).forEach(category => {
             data[category].items
                 .filter(item => item.map === activeMap)
                 .forEach(item => {
                     item.status = "not_collected";
-
-                    // Update circle appearance
                     const circle = document.getElementById(item.id);
                     if (circle) {
                         circle.classList.remove("collected", "unsure");
@@ -270,13 +333,9 @@ export function initInteractions(data) {
                 });
         });
 
-        // Close sidebar if open
         closeSidebar();
-
-        // Update tracker and save
         saveState();
         if (window.updateTracker) window.updateTracker();
-
         resetModal.classList.remove("open");
     });
 }
