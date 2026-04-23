@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Mercenaries Map</title>
+        <style>
+            /* ============================================================
+              LAYOUT & CONTAINERS
+            ============================================================ */
+
+            .map-container {
+                display: none;
+                width: 100%;
+                height: 100vh;
+                overflow: hidden;
+                background: #111;
+            }
+
+            .map-container.active {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .map {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+
+            svg {
+                max-width: 100%;
+                display: block;
+                margin: 0 auto;
+            }
+
+            /* ============================================================
+              MAP SWITCHER
+            ============================================================ */
+
+            #map-switcher {
+                position: fixed;
+                top: 16px;
+                left: 16px;
+                z-index: 1500;
+                display: flex;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.6);
+            }
+
+            #map-switcher button {
+                background: #1a1a1a;
+                color: #aaa;
+                border: none;
+                padding: 10px 18px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                letter-spacing: 0.4px;
+                transition: background 0.2s, color 0.2s;
+                border-right: 1px solid #333;
+            }
+
+            #map-switcher button:last-child {
+                border-right: none;
+            }
+
+            #map-switcher button.active {
+                background: #c8a000;
+                color: #111;
+            }
+
+            #map-switcher button:hover:not(.active) {
+                background: #2a2a2a;
+                color: white;
+            }
+
+            .map-total {
+                font-size: 11px;
+                font-weight: 400;
+                color: #888;
+                margin-top: 3px;
+                letter-spacing: 0.3px;
+            }
+
+            #btn-south.active .map-total,
+            #btn-north.active .map-total {
+                color: #333;
+            }
+
+            /* ============================================================
+              TRACKER BAR
+            ============================================================ */
+
+            #tracker {
+                position: fixed;
+                bottom: 16px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 1500;
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .tracker-btn {
+                background: #1a1a1a;
+                color: #aaa;
+                border: none;
+                padding: 8px 14px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                letter-spacing: 0.4px;
+                border-radius: 8px;
+                transition: background 0.2s, color 0.2s, opacity 0.2s;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.6);
+                white-space: nowrap;
+            }
+
+            .tracker-btn:hover {
+                background: #2a2a2a;
+                color: white;
+            }
+
+            .tracker-btn.hidden-category {
+                opacity: 0.65;
+                text-decoration: line-through;
+            }
+
+            .tracker-btn .count {
+                color: #c8a000;
+                margin-left: 6px;
+            }
+
+            /* ============================================================
+              SIDEBAR
+            ============================================================ */
+
+            #sidebar {
+                position: fixed;
+                top: 0;
+                right: -360px;
+                width: 340px;
+                height: 100vh;
+                background: #1a1a1a;
+                color: white;
+                z-index: 1000;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                padding: 20px;
+                box-sizing: border-box;
+                transition: right 0.3s ease;
+                overflow-y: auto;
+                box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+            }
+
+            #sidebar.open {
+                right: 0;
+            }
+
+            #sidebar-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            #sidebar-category {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #888;
+            }
+
+            #sidebar-name {
+                font-size: 18px;
+                font-weight: bold;
+            }
+
+            #sidebar-close {
+                background: none;
+                border: none;
+                color: #888;
+                font-size: 18px;
+                cursor: pointer;
+                padding: 0;
+                flex-shrink: 0;
+            }
+
+            #sidebar-close:hover {
+                color: white;
+            }
+
+            #sidebar-status {
+                font-size: 13px;
+                padding: 6px 10px;
+                border-radius: 6px;
+                display: inline-block;
+                background: #2a2a2a;
+            }
+
+            #sidebar-status[data-status="collected"] { color: #4caf50; }
+            #sidebar-status[data-status="unsure"]    { color: #ffd900; }
+            #sidebar-status[data-status="not_collected"] { color: #f44336; }
+
+            #sidebar-image {
+                width: 100%;
+                border-radius: 8px;
+                display: block;
+                background: #2a2a2a;
+                cursor: zoom-in;
+            }
+
+            #sidebar-description {
+                font-size: 25px;
+                line-height: 1.4;
+                color: #ccc;
+            }
+
+            /* ============================================================
+              LIGHTBOX
+            ============================================================ */
+
+            #lightbox {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.85);
+                z-index: 2000;
+                display: none;
+                justify-content: center;
+                align-items: center;
+                cursor: zoom-out;
+            }
+
+            #lightbox.open {
+                display: flex;
+            }
+
+            #lightbox-image {
+                max-width: 90vw;
+                max-height: 90vh;
+                border-radius: 8px;
+                object-fit: contain;
+                box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+            }
+
+            /* ============================================================
+              TOOLTIP
+            ============================================================ */
+
+            #tooltip {
+                position: absolute;
+                background: rgba(0, 0, 0, 0.85);
+                color: white;
+                padding: 10px 12px;
+                border-radius: 8px;
+                font-size: 13px;
+                pointer-events: none;
+                display: none;
+                z-index: 9999;
+                max-width: 220px;
+                line-height: 1.3;
+            }
+
+            /* ============================================================
+              SVG COLLECTIBLE STATES
+            ============================================================ */
+
+            .collected {
+                opacity: 0.5;
+                fill: black !important;
+            }
+
+            .unsure {
+                fill: white;
+                font-size: 5px;
+                font-weight: bold;
+                pointer-events: none;
+                paint-order: stroke;
+                stroke: black;
+                stroke-width: 2px;
+            }
+
+            #map-container:active {
+                cursor: grabbing;
+            }
+
+            /* ============================================================
+              RESET BUTTON & MODAL
+            ============================================================ */
+
+            #reset-btn {
+                position: fixed;
+                bottom: 16px;
+                right: 16px;
+                z-index: 1500;
+                background: #1a1a1a;
+                color: #aaa;
+                border: none;
+                padding: 8px 14px;
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                letter-spacing: 0.4px;
+                border-radius: 8px;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.6);
+                transition: background 0.2s, color 0.2s;
+            }
+
+            #reset-btn:hover {
+                background: #c0392b;
+                color: white;
+            }
+
+            #reset-modal {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.7);
+                z-index: 3000;
+                justify-content: center;
+                align-items: center;
+            }
+
+            #reset-modal.open {
+                display: flex;
+            }
+
+            #reset-modal-box {
+                background: #1a1a1a;
+                border-radius: 10px;
+                padding: 28px 24px;
+                width: 320px;
+                box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            #reset-modal-title {
+                font-size: 16px;
+                font-weight: bold;
+                color: white;
+            }
+
+            #reset-modal-message {
+                font-size: 13px;
+                color: #aaa;
+                line-height: 1.5;
+            }
+
+            #reset-modal-buttons {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                margin-top: 8px;
+            }
+
+            #reset-cancel {
+                background: #2a2a2a;
+                color: #aaa;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s, color 0.2s;
+            }
+
+            #reset-cancel:hover {
+                background: #333;
+                color: white;
+            }
+
+            #reset-confirm {
+                background: #c0392b;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+
+            #reset-confirm:hover {
+                background: #e74c3c;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="map-switcher">
+            <button id="btn-south" class="active" onclick="switchMap('south')">
+                Southern Province
+                <div id="south-total" class="map-total">0 / 0</div>
+            </button>
+            <button id="btn-north" onclick="switchMap('north')">
+                Northern Province
+                <div id="north-total" class="map-total">0 / 0</div>
+            </button>
+                  </div>
+        <div id="map-container-south" class="map-container active">
+            <svg
+                id="map"
+                class="map"
+                viewBox="-159.50143 -68.193756 529.16669 433.38751"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink">
+                <image
+                  width="529.16669"
+                  height="433.38751"
+                  preserveAspectRatio="xMidYMid meet"
+                  href="assets/images/south/South_Map.png"
+                  id="image1"
+                  x="-159.50143"
+                  y="-68.193756"
+                  sodipodi:insensitive="true"
+                  />
+                <g id="monuments" style="display:inline">
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_001" cx="80.738426" cy="289.97076" r="2.6458333" inkscape:label="Statue of the Giving Leader" />
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_002" cx="-31.323347" cy="314.90414" r="2.6458333" inkscape:label="Statue of the Glorious Leader" />
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_003" cx="-85.753525" cy="49.324818" r="2.6458333" inkscape:label="Statue of the Gracious Leader" />
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_004" cx="-65.262039" cy="-16.1402" r="2.6458333" inkscape:label="Statue of the Wise Leader" />
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_005" cx="102.43608" cy="24.24045" r="2.6458333" inkscape:label="Song Guardian of the People" />
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_006" cx="295.24103" cy="7.3372698" r="2.6458333" inkscape:label="Statue of the Benevolent Leader" />
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_007" cx="211.5477" cy="139.55124" r="2.6458333" inkscape:label="Statue of the Omniscient Leader" />
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_008" cx="83.486557" cy="189.08719" r="2.6458333" inkscape:label="Monument to Party Foundation" />
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_009" cx="103.70234" cy="180.13651" r="2.6458333" inkscape:label="Tower of Juche Idea" />
+                  <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_010" cx="96.797958" cy="145.85417" r="2.6458333" inkscape:label="Mansudae Grand Monument" />
+                  </g>
+                <g id="listening_posts" style="display:inline">
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_001" cx="271.69742" cy="291.86703" r="2.6458333" inkscape:label="Listening Post S1" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_002" cx="96.958626" cy="323.45142" r="2.6458333" inkscape:label="Listening Post S2" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_003" cx="60.514664" cy="304.99252" r="2.6458333" inkscape:label="Listening Post S3" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_004" cx="24.903099" cy="272.91229" r="2.6458333" inkscape:label="Listening Post S4" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_005" cx="7.6710172" cy="258.04538" r="2.6458333" inkscape:label="Listening Post S5" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_006" cx="-20.269007" cy="286.61917" r="2.6458333" inkscape:label="Listening Post S6" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_007" cx="-40.964397" cy="252.155" r="2.6458333" inkscape:label="Listening Post S7" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_008" cx="-31.03993" cy="208.77261" r="2.6458333" inkscape:label="Listening Post S8" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_009" cx="-37.855305" cy="86.410133" r="2.6458333" inkscape:label="Listening Post S9" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_010" cx="-52.358208" cy="82.049332" r="2.6458333" inkscape:label="Listening Post S10" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_011" cx="-79.530922" cy="78.233139" r="2.6458333" inkscape:label="Listening Post S11" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_012" cx="-2.6670597" cy="106.18678" r="2.6458333" inkscape:label="Listening Post S12" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_013" cx="15.795309" cy="41.348537" r="2.6458333" inkscape:label="Listening Post S13" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_014" cx="34.946991" cy="35.989964" r="2.6458333" inkscape:label="Listening Post S14" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_015" cx="77.116386" cy="34.120621" r="2.6458333" inkscape:label="Listening Post S15" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_016" cx="94.438087" cy="34.120621" r="2.6458333" inkscape:label="Listening Post S16" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_017" cx="183.55525" cy="24.556814" r="2.6458333" inkscape:label="Listening Post S17" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_018" cx="174.77179" cy="39.53899" r="2.6458333" inkscape:label="Listening Post S18" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_019" cx="172.48589" cy="238.28854" r="2.6458333" inkscape:label="Listening Post S19" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_020" cx="101.0565" cy="175.55228" r="2.6458333" inkscape:label="Listening Post S20" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_021" cx="107.04263" cy="138.61356" r="2.6458333" inkscape:label="Listening Post S21" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_022" cx="101.75096" cy="138.61356" r="2.6458333" inkscape:label="Listening Post S22" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_023" cx="139.6599" cy="148.92514" r="2.6458333" inkscape:label="Listening Post S23" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_024" cx="115.02617" cy="82.488533" r="2.6458333" inkscape:label="Listening Post S24" />
+                  <circle style="fill:#ff0000;stroke-width:11.5103" id="list_025" cx="86.474976" cy="92.962936" r="2.6458333" inkscape:label="Listening Post S25" />
+                  </g>
+                <g id="national_treasures"  style="display:inline">
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_001" cx="299.41443" cy="263.1709" r="2.6458333" inkscape:label="Science Fiction RTS ?" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_002" cx="276.98907" cy="291.86703" r="2.6458333" inkscape:label="Yi Dynasty Tea Bowl" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_003" cx="251.73506" cy="318.40378" r="2.6458333" inkscape:label="Ancient Water dropper" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_004" cx="204.2532" cy="327.13696" r="2.6458333" inkscape:label="Dragon Headed Staff" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_005" cx="144.54588" cy="299.70087" r="2.6458333" inkscape:label="Battlecraft RTS" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_006" cx="75.446762" cy="284.67911" r="2.6458333" inkscape:label="Three Han Bronze Horn" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_007" cx="19.611433" cy="273.44986" r="2.6458333" inkscape:label="Prehistory Mirror" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_008" cx="7.6710181" cy="243.29372" r="2.6458333" inkscape:label="Three Han Bronze Dagger" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_009" cx="-9.7701445" cy="326.79626" r="2.6458333" inkscape:label="Three Han Bronze Halberd" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_010" cx="-14.977339" cy="283.97333" r="2.6458333" inkscape:label="Three Han Bronze Spearheads" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_011" cx="-25.748262" cy="263.33704" r="2.6458333" inkscape:label="Ancient Set of Ornaments" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_012" cx="-77.782394" cy="293.83105" r="2.6458333" inkscape:label="Yi Dynasty Clay Bottle" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_013" cx="-83.538643" cy="214.84608" r="2.6458333" inkscape:label="Prehistory Dagger" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_014" cx="-100.43283" cy="143.21469" r="2.6458333" inkscape:label="Ancient Metal Cap" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_015" cx="-108.37032" cy="176.91862" r="2.6458333" inkscape:label="Ancient Sutra Painting" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_016" cx="9.3879128" cy="206.12679" r="2.6458333" inkscape:label="Standing Avalokitesvara" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_017" cx="-12.487763" cy="173.0556" r="2.6458333" inkscape:label="Temple Gong" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_018" cx="-38.410587" cy="178.34727" r="2.6458333" inkscape:label="Punch'ong Plum Vase" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_019" cx="-53.277481" cy="156.30034" r="2.6458333" inkscape:label="Prehistory Cap" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_020" cx="-53.277481" cy="135.35153" r="2.6458333" inkscape:label="Seated Maitreya" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_021" cx="-35.209469" cy="79.04512" r="2.6458333" inkscape:label="Bodhisattva Triad" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_022" cx="-108.18116" cy="90.225906" r="2.6458333" inkscape:label="Liaoning Dagger" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_023" cx="-74.239258" cy="49.324818" r="2.6458333" inkscape:label="Lacquered Scabbard" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_024" cx="-94.292892" cy="-16.1402" r="2.6458333" inkscape:label="Amitabha Triad" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_025" cx="-42.172897" cy="-16.1402" r="2.6458333" inkscape:label="Finial Bells" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_026" cx="-30.684843" cy="-35.653" r="2.6458333" inkscape:label="Ancient Halberd" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_027" cx="-20.085403" cy="58.924507" r="2.6458333" inkscape:label="Jin Dynasty Official Seal" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_028" cx="10.503644" cy="41.348537" r="2.6458333" inkscape:label="Prehistory Crown" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_029" cx="24.363659" cy="39.412285" r="2.6458333" inkscape:label="Miniature Pagoda" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_030" cx="18.441143" cy="3.9326591" r="2.6458333" inkscape:label="Harness Ornaments" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_031" cx="127.32895" cy="18.948784" r="2.6458333" inkscape:label="Ritual Rattles" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_032" cx="158.65318" cy="-17.563179" r="2.6458333" inkscape:label="Ornamented Mirror" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_033" cx="183.55525" cy="29.84848" r="2.6458333" inkscape:label="Seated Buddha" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_034" cx="179.34912" cy="42.184826" r="2.6458333" inkscape:label="Prehistory Bowl" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_035" cx="245.52196" cy="14.497004" r="2.6458333" inkscape:label="Incense Case" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_036" cx="247.30484" cy="39.423782" r="2.6458333" inkscape:label="Phoenix Head Sword" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_037" cx="321.07257" cy="21.189878" r="2.6458333" inkscape:label="Punch'ong Flask" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_038" cx="305.71634" cy="59.88784" r="2.6458333" inkscape:label="Gold Sword Hilt" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_039" cx="253.45946" cy="95.164215" r="2.6458333" inkscape:label="Ritual Incense" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_040" cx="160.89548" cy="133.77698" r="2.6458333" inkscape:label="Prehistory Earrings" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_041" cx="181.94093" cy="144.84291" r="2.6458333" inkscape:label="Ancient Mirror" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_042" cx="240.82166" cy="178.12448" r="2.6458333" inkscape:label="Standing Buddha" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_043" cx="180.42339" cy="235.64272" r="2.6458333" inkscape:label="Prehistory Pestle" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_044" cx="100.86301" cy="252.75371" r="2.6458333" inkscape:label="Ancient Horse Saddle" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_045" cx="105.08191" cy="189.08719" r="2.6458333" inkscape:label="Golden Earrings" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_046" cx="106.34818" cy="175.55228" r="2.6458333" inkscape:label="Crystal Candlesticks" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_047" cx="58.604492" cy="140.75023" r="2.6458333" inkscape:label="Standing Bodhisattva" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_048" cx="63.89616" cy="132.9789" r="2.6458333" inkscape:label="Ancient Roof Ornament" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_049" cx="129.07655" cy="151.57097" r="2.6458333" inkscape:label="Jade Crown" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_050" cx="142.30573" cy="102.71182" r="2.6458333" inkscape:label="Prehistory Spearhead" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_051" cx="155.60381" cy="77.196869" r="2.6458333" inkscape:label="Temple Bell" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_052" cx="125.6095" cy="82.488533" r="2.6458333" inkscape:label="Bronze Crown" />
+                  <circle style="fill:#00d400;stroke-width:11.5103" id="nat_053" cx="79.488335" cy="85.134369" r="2.6458333" inkscape:label="Gold Earrings" />
+                  </g>
+                <g id="blueprints" style="display:inline">
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_001" cx="254.38089" cy="292.96518" r="2.6458333" inkscape:label="Mobile WMD Lab" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_002" cx="198.96153" cy="329.78281" r="2.6458333" inkscape:label="Spent Fuel Rods" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_003" cx="22.257267" cy="283.97333" r="2.6458333" inkscape:label="Nuclear Weapons Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_004" cx="-0.49338487" cy="299.70087" r="2.6458333" inkscape:label="Chemical Weapons Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_005" cx="-52.253609" cy="294.40921" r="2.6458333" inkscape:label="Biological Weapons Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_006" cx="-86.184479" cy="220.13776" r="2.6458333" inkscape:label="MIRV Schematic" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_007" cx="-105.72449" cy="143.21469" r="2.6458333" inkscape:label="Rocket Engine" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_008" cx="-116.95913" cy="176.91862" r="2.6458333" inkscape:label="Thermobaric Grenade Design" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_009" cx="-39.046455" cy="208.77261" r="2.6458333" inkscape:label="Aerosol Delivery Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_010" cx="-43.146969" cy="90.26828" r="2.6458333" inkscape:label="American Missile Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_011" cx="-47.06654" cy="76.757668" r="2.6458333" inkscape:label="EMP Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_012" cx="-65.776863" cy="89.055969" r="2.6458333" inkscape:label="IRBM Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_013" cx="-73.72863" cy="111.86314" r="2.6458333" inkscape:label="Yellow Cake Container" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_014" cx="-79.020294" cy="111.86314" r="2.6458333" inkscape:label="SRBM Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_015" cx="-72.718781" cy="92.092499" r="2.6458333" inkscape:label="European Target List" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_016" cx="-74.239258" cy="84.695168" r="2.6458333" inkscape:label="Heavy Water Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_017" cx="-74.239258" cy="78.233139" r="2.6458333" inkscape:label="Steel Centrifuge" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_018" cx="-79.530922" cy="89.986832" r="2.6458333" inkscape:label="Asia Target List" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_019" cx="-89.386368" cy="84.695168" r="2.6458333" inkscape:label="Depleted Uranium Shells" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_020" cx="-108.18116" cy="98.717354" r="2.6458333" inkscape:label="MRBM Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_021" cx="-92.032204" cy="67.866707" r="2.6458333" inkscape:label="USA Target List" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_022" cx="-58.730602" cy="-4.0132356" r="2.6458333" inkscape:label="Speed Hack" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_023" cx="-94.292892" cy="-6.6590686" r="2.6458333" inkscape:label="Aluminum Tubes" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_024" cx="-47.464565" cy="-16.1402" r="2.6458333" inkscape:label="Buried Centrifuge" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_025" cx="-2.6670585" cy="76.399284" r="2.6458333" inkscape:label="Aimbot" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_026" cx="19.071993" cy="63.624874" r="2.6458333" inkscape:label="128-bit Codebreaker" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_027" cx="13.149477" cy="36.766453" r="2.6458333" inkscape:label="Airborne Hemorrhagic" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_028" cx="29.655325" cy="28.065941" r="2.6458333" inkscape:label="Magnets" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_029" cx="69.077133" cy="-4.0132356" r="2.6458333" inkscape:label="Warhead Canisters" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_030" cx="107.72775" cy="2.0792253" r="2.6458333" inkscape:label="Retroviral Compound" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_031" cx="179.34912" cy="36.893162" r="2.6458333" inkscape:label="Acid-Filled Paintball Design" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_032" cx="208.53398" cy="55.102077" r="2.6458333" inkscape:label="ICBM Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_033" cx="213.11395" cy="57.74791" r="2.6458333" inkscape:label="DOD Password List" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_034" cx="250.81363" cy="14.497004" r="2.6458333" inkscape:label="Solid Fuel Formula" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_035" cx="242.01317" cy="39.423782" r="2.6458333" inkscape:label="Grain Blight Culture" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_036" cx="294.52426" cy="-20.978977" r="2.6458333" inkscape:label="Cobalt-60 Infused Headphones" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_037" cx="291.87842" cy="-1.7195917" r="2.6458333" inkscape:label="Deeply Buried Targets List" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_038" cx="279.37671" cy="10.951056" r="2.6458333" inkscape:label="VX Warhead Design" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_039" cx="292.59518" cy="12.628936" r="2.6458333" inkscape:label="Inertial Measurement Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_040" cx="318.42673" cy="40.455875" r="2.6458333" inkscape:label="Terrain Comparison Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_041" cx="300.42468" cy="63.378384" r="2.6458333" inkscape:label="UAV Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_042" cx="232.41348" cy="70.387596" r="2.6458333" inkscape:label="1337 d1c710n4ry!1!!!" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_043" cx="208.90187" cy="103.58469" r="2.6458333" inkscape:label="Missile Launcher Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_044" cx="240.82166" cy="145.36459" r="2.6458333" inkscape:label="Cruise Missile Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_045" cx="198.17442" cy="127.8637" r="2.6458333" inkscape:label="Canister of Plutonium" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_046" cx="200.82025" cy="155.07408" r="2.6458333" inkscape:label="British Missile Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_047" cx="166.18715" cy="108.87635" r="2.6458333" inkscape:label="Software Key Generator" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_048" cx="206.11192" cy="220.12463" r="2.6458333" inkscape:label="Uranium Supplier List" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_049" cx="165.57491" cy="233.10272" r="2.6458333" inkscape:label="Bat-Guided Bomb Design" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_050" cx="149.45253" cy="240.93437" r="2.6458333" inkscape:label="Bulletproof Bandana Swatch" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_051" cx="180.42339" cy="195.57346" r="2.6458333" inkscape:label="Smallpox Genome" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_052" cx="92.910736" cy="207.3037" r="2.6458333" inkscape:label="Pox Aerosol" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_053" cx="118.0831" cy="170.2606" r="2.6458333" inkscape:label="Ebotox Virus" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_054" cx="76.861259" cy="144.24922" r="2.6458333" inkscape:label="Missile Sales Data" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_055" cx="104.3968" cy="143.20834" r="2.6458333" inkscape:label="Internal Guidance Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_056" cx="118.0831" cy="151.57097" r="2.6458333" inkscape:label="Container of Mono Propellant" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_057" cx="134.36823" cy="151.57097" r="2.6458333" inkscape:label="Container of Hypergolic Propellant" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_058" cx="160.89548" cy="77.196869" r="2.6458333" inkscape:label="Nuclear Blowgun Specs" />
+                  <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_059" cx="120.31783" cy="82.488533" r="2.6458333" inkscape:label="Fluoridated Water" />
+                  </g>
+              </svg>
+                  </div>
+        <div id="map-container-north" class="map-container">
+            <svg
+                id="map-north"
+                class="map"
+                viewBox="-159.50143 -68.193756 529.16669 433.38748"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink">
+                <image
+                    width="529.16669"
+                    height="433.38748"
+                    preserveAspectRatio="none"
+                    href="assets/images/north/North_Map.png"
+                    id="image1"
+                    x="-159.50143"
+                    y="-68.193756"
+                    transform="translate(1.1906363e-6)"
+                    style="display:inline"
+                    sodipodi:insensitive="true"
+                  />
+                <g id="monuments" style="display:inline">
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_011" cx="22.134779" cy="43.358063" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_012" cx="214.90829" cy="239.75111" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_013" cx="-71.658302" cy="319.67114" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_014" cx="-94.852028" cy="258.90369" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_015" cx="21.618031" cy="238.55383" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_016" cx="30.666765" cy="223.04814" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_017" cx="126.43159" cy="26.57275" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_018" cx="130.13585" cy="30.276789" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_019" cx="264.91003" cy="12.246352" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_020" cx="259.61838" cy="12.246352" r="2.6458333" />
+                      <circle style="fill:#ffcc00;stroke-width:11.5103" id="mon_021" cx="25.429148" cy="17.763353" r="2.6458333" />
+                  </g>
+                <g id="listening_posts" style="display:inline">
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_026" cx="1.8644812" cy="170.53731" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_027" cx="-8.718852" cy="170.53731" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_028" cx="-8.718852" cy="210.04303" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_029" cx="25.375097" cy="242.31094" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_030" cx="4.3797441" cy="288.9726" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_031" cx="-14.010518" cy="314.31387" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_032" cx="-3.9584703" cy="329.24081" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_033" cx="-83.023315" cy="324.9628" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_034" cx="-69.676903" cy="311.66803" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_035" cx="-102.78953" cy="264.19534" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_036" cx="-78.073425" cy="117.80978" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_037" cx="-75.427597" cy="51.246639" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_038" cx="-89.933334" cy="22.142359" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_039" cx="-84.641663" cy="22.142359" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_040" cx="-47.967438" cy="29.84753" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_041" cx="-23.119755" cy="71.897453" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_042" cx="-29.858128" cy="81.638115" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_043" cx="-17.977415" cy="141.00269" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_044" cx="15.3771" cy="125.26836" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_045" cx="53.865868" cy="24.526085" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_046" cx="51.220032" cy="47.18792" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_047" cx="72.802368" cy="88.121033" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_048" cx="274.13422" cy="-17.72493" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_049" cx="280.15891" cy="6.9546857" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_050" cx="254.85329" cy="106.90773" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_051" cx="285.6795" cy="199.44226" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_052" cx="276.54825" cy="299.96121" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_053" cx="211.21718" cy="243.57384" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_054" cx="159.35199" cy="257.25815" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_055" cx="156.04688" cy="305.63556" r="2.6458333" />
+                      <circle style="fill:#ff0000;stroke-width:11.5103" id="list_056" cx="194.55899" cy="331.2464" r="2.6458333" />
+                  </g>
+                <g id="national_treasures" style="display:inline">
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_054" cx="-84.641663" cy="16.850691" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_055" cx="-66.30455" cy="5.8006392" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_056" cx="-32.223022" cy="-14.173491" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_057" cx="-72.781761" cy="114.37648" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_058" cx="12.731267" cy="130.56003" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_059" cx="-23.269081" cy="135.71101" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_060" cx="-23.269081" cy="141.00269" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_061" cx="-3.4271841" cy="170.53731" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_062" cx="-3.4271841" cy="210.95668" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_063" cx="-35.188438" cy="239.66512" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_064" cx="-97.497864" cy="264.19534" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_065" cx="-54.224415" cy="334.53247" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_066" cx="11.069506" cy="283.68094" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_067" cx="4.379745" cy="283.68094" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_068" cx="83.509644" cy="296.97845" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_069" cx="189.26732" cy="333.89224" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_070" cx="178.68398" cy="335.14658" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_071" cx="158.6927" cy="310.92722" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_072" cx="156.04688" cy="297.58081" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_073" cx="236.27249" cy="307.90042" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_074" cx="283.51151" cy="289.1452" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_075" cx="150.7552" cy="257.25815" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_076" cx="135.21254" cy="251.96648" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_077" cx="101.02028" cy="166.78435" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_078" cx="102.43607" cy="148.49998" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_079" cx="142.19803" cy="166.78435" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_080" cx="191.63916" cy="226.45024" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_081" cx="218.03983" cy="235.40974" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_082" cx="291.64697" cy="207.49081" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_083" cx="257.63629" cy="174.75876" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_084" cx="237.44756" cy="177.40459" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_085" cx="197.82491" cy="151.14583" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_086" cx="207.87695" cy="133.06903" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_087" cx="216.59753" cy="90.660728" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_088" cx="238.72992" cy="90.660728" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_089" cx="254.85329" cy="90.660728" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_090" cx="280.31226" cy="90.660728" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_091" cx="273.6225" cy="76.443176" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_092" cx="296.93863" cy="75.606956" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_093" cx="221.88921" cy="53.269745" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_094" cx="249.13083" cy="41.646019" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_095" cx="277.51306" cy="12.246352" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_096" cx="289.00113" cy="1.6630177" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_097" cx="273.31674" cy="-12.433264" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_098" cx="245.3631" cy="1.6630177" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_099" cx="165.69949" cy="-8.5877323" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_100" cx="114.89991" cy="23.926916" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_101" cx="124.84418" cy="31.849483" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_102" cx="116.94845" cy="75.875511" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_103" cx="71.165154" cy="76.02253" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_104" cx="61.197578" cy="97.647102" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_105" cx="-41.349525" cy="82.461708" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_106" cx="-35.149796" cy="81.638115" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_107" cx="48.5742" cy="41.896252" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_108" cx="15.630513" cy="9.3749218" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_109" cx="-61.012886" cy="42.62999" r="2.6458333" />
+                      <circle style="fill:#00d400;stroke-width:11.5103" id="nat_110" cx="-32.223022" cy="13.541233" r="2.6458333" />
+                  </g>
+                <g id="blueprints" style="display:inline"
+                      transform="translate(-125.01706,93.340443)">
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_060" cx="143.03999" cy="45.157085" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_061" cx="70.538445" cy="-56.625584" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_062" cx="296.94611" cy="240.55179" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_063" cx="213.82359" cy="241.19203" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_064" cx="92.877792" cy="112.32457" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_065" cx="70.915337" cy="102.01911" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_066" cx="419.30984" cy="-50.907944" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_067" cx="239.31967" cy="-12.173264" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_068" cx="401.56531" cy="157.02055" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_069" cx="267.21509" cy="38.439228" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_070" cx="395.99371" cy="-7.373559" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_071" cx="296.60226" cy="-44.585484" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_072" cx="382.51617" cy="-12.441818" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_073" cx="15.11307" cy="57.805374" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_074" cx="49.589466" cy="29.761005" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_075" cx="361.28955" cy="188.65974" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_076" cx="208.5267" cy="208.92967" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_077" cx="120.31783" cy="82.488533" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_078" cx="344.26044" cy="-51.694424" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_079" cx="299.59195" cy="245.84346" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_080" cx="44.297798" cy="29.761005" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_081" cx="85.616486" cy="-5.5870686" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_082" cx="174.12222" cy="241.19203" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_083" cx="58.712509" cy="-79.79921" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_084" cx="254.93793" cy="159.80862" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_085" cx="37.729561" cy="-65.906418" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_086" cx="269.86093" cy="160.36392" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_087" cx="398.91946" cy="191.30557" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_088" cx="402.53012" cy="-100.48204" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_089" cx="397.23846" cy="-100.48204" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_090" cx="389.92709" cy="-86.385757" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_091" cx="129.3968" cy="185.04883" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_092" cx="439.80051" cy="32.461082" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_093" cx="254.93793" cy="159.80862" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_094" cx="384.58426" cy="188.65974" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_095" cx="129.3968" cy="120.26207" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_096" cx="143.03999" cy="39.865417" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_097" cx="92.794037" cy="-102.22227" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_098" cx="46.94363" cy="-59.271416" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_099" cx="439.80051" cy="40.942745" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_100" cx="198.82805" cy="-29.41642" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_101" cx="184.0374" cy="190.3405" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_102" cx="297.5434" cy="138.40146" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_103" cx="91.583916" cy="54.541012" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_104" cx="30.165031" cy="85.134369" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_105" cx="226.03734" cy="83.461533" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_106" cx="51.824894" cy="133.16475" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_107" cx="432.65063" cy="60.89257" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_108" cx="113.65237" cy="235.90038" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_109" cx="183.5688" cy="37.219585" r="2.6458333" />
+                      <circle style="fill:#0000d4;stroke-width:11.5103" id="blue_110" cx="308.99271" cy="240.55179" r="2.6458333" />
+                  </g>
+              </svg>
+                  </div>
+        <div id="tracker">
+        <button class="tracker-btn" data-category="blueprints">
+            Blueprints <span class="count">0 / 0</span>
+                  </button>
+        <button class="tracker-btn" data-category="national_treasures">
+            National Treasures <span class="count">0 / 0</span>
+                  </button>
+        <button class="tracker-btn" data-category="listening_posts">
+            Listening Posts <span class="count">0 / 0</span>
+                  </button>
+        <button class="tracker-btn" data-category="monuments">
+            Monuments <span class="count">0 / 0</span>
+                  </button>
+                  </div>
+        <div id="tooltip">
+                  </div>
+        <div id="sidebar">
+            <div id="sidebar-header">
+                <div>
+                    <div id="sidebar-category"></div>
+                    <div id="sidebar-name"></div>
+                </div>
+                <button id="sidebar-close">✕</button>
+            </div>
+            <div id="sidebar-status"></div>
+            <img id="sidebar-image" src="" alt="" />
+        <div id="sidebar-description"></div>
+                  </div>
+        <div id="lightbox">
+            <img id="lightbox-image" src="" alt="" />
+                  </div>
+        <script>
+            function switchMap(which) {
+                const south = document.getElementById('map-container-south');
+                const north = document.getElementById('map-container-north');
+                const btnSouth = document.getElementById('btn-south');
+                const btnNorth = document.getElementById('btn-north');
+
+                if (which === 'south') {
+                    south.classList.add('active');
+                    north.classList.remove('active');
+                    btnSouth.classList.add('active');
+                    btnNorth.classList.remove('active');
+                } else {
+                    north.classList.add('active');
+                    south.classList.remove('active');
+                    btnNorth.classList.add('active');
+                    btnSouth.classList.remove('active');
+                }
+                window.dispatchEvent(new Event('resize'))
+                if (window.updateTracker) window.updateTracker();
+            }
+                  </script>
+        <script src="scripts/main.js" type="module"></script>
+
+        <button id="reset-btn">Reset Map Progress</button>
+
+        <div id="reset-modal">
+          <div id="reset-modal-box">
+              <div id="reset-modal-title">Reset Progress</div>
+              <div id="reset-modal-message">This will reset all collectibles on the active map. This cannot be undone.</div>
+              <div id="reset-modal-buttons">
+                  <button id="reset-cancel">Cancel</button>
+                  <button id="reset-confirm">Reset</button>
+              </div>
+          </div>
+                  </div>
+    </body>
+</html>
