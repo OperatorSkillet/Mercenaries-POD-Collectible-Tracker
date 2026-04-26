@@ -16,23 +16,43 @@
   "diamonds": {
     "displayName": "Diamonds",
     "items": [
-      { "id": "dia_002", "status": "not_captured", "map": "south", "act": "two", "name": "Two of Diamonds"},
-      { "id": "dia_003", "status": "not_captured", "map": "south", "act": "two", "name": "Three of Diamonds"},
-      { "id": "dia_004", "status": "not_captured", "map": "south", "act": "two", "name": "Four of Diamonds"},
-      { "id": "dia_005", "status": "not_captured", "map": "south", "act": "two", "name": "Five of Diamonds"},
-      { "id": "dia_006", "status": "not_captured", "map": "south", "act": "two", "name": "Six of Diamonds"},
-      { "id": "dia_007", "status": "not_captured", "map": "south", "act": "two", "name": "Seven of Diamonds"},
-      { "id": "dia_008", "status": "not_captured", "map": "south", "act": "two", "name": "Eight of Diamonds"},
-      { "id": "dia_009", "status": "not_captured", "map": "south", "act": "two", "name": "Nine of Diamonds"},
-      { "id": "dia_010", "status": "not_captured", "map": "south", "act": "two", "name": "Ten of Diamonds"}
+      { "id": "diamond_002", "status": "not_captured", "map": "south", "act": "two", "name": "Two of Diamonds"},
+      { "id": "diamond_003", "status": "not_captured", "map": "south", "act": "two", "name": "Three of Diamonds"},
+      { "id": "diamond_004", "status": "not_captured", "map": "south", "act": "two", "name": "Four of Diamonds"},
+      { "id": "diamond_005", "status": "not_captured", "map": "south", "act": "two", "name": "Five of Diamonds"},
+      { "id": "diamond_006", "status": "not_captured", "map": "south", "act": "two", "name": "Six of Diamonds"},
+      { "id": "diamond_007", "status": "not_captured", "map": "south", "act": "two", "name": "Seven of Diamonds"},
+      { "id": "diamond_008", "status": "not_captured", "map": "south", "act": "two", "name": "Eight of Diamonds"},
+      { "id": "diamond_009", "status": "not_captured", "map": "south", "act": "two", "name": "Nine of Diamonds"},
+      { "id": "diamond_010", "status": "not_captured", "map": "south", "act": "two", "name": "Ten of Diamonds"}
     ]
   },
   "hearts": {
     "displayName": "Hearts",
-    "items": []
+    "items": [
+      { "id": "heart_002", "status": "not_captured", "map": "north", "act": "three", "name": "Two of Hearts"},
+      { "id": "heart_003", "status": "not_captured", "map": "north", "act": "three", "name": "Three of Hearts"},
+      { "id": "heart_004", "status": "not_captured", "map": "north", "act": "three", "name": "Four of Hearts"},
+      { "id": "heart_005", "status": "not_captured", "map": "north", "act": "three", "name": "Five of Hearts"},
+      { "id": "heart_006", "status": "not_captured", "map": "north", "act": "three", "name": "Six of Hearts"},
+      { "id": "heart_007", "status": "not_captured", "map": "north", "act": "three", "name": "Seven of Hearts"},
+      { "id": "heart_008", "status": "not_captured", "map": "north", "act": "three", "name": "Eight of Hearts"},
+      { "id": "heart_009", "status": "not_captured", "map": "north", "act": "three", "name": "Nine of Hearts"},
+      { "id": "heart_010", "status": "not_captured", "map": "north", "act": "three", "name": "Ten of Hearts"}
+    ]
   },
   "spades": {
     "displayName": "Spades",
-    "items": []
+    "items": [
+      { "id": "spade_002", "status": "not_captured", "map": "north", "act": "four", "name": "Two of Spades"},
+      { "id": "spade_003", "status": "not_captured", "map": "north", "act": "four", "name": "Three of Spades"},
+      { "id": "spade_004", "status": "not_captured", "map": "north", "act": "four", "name": "Four of Spades"},
+      { "id": "spade_005", "status": "not_captured", "map": "north", "act": "four", "name": "Five of Spades"},
+      { "id": "spade_006", "status": "not_captured", "map": "north", "act": "four", "name": "Six of Spades"},
+      { "id": "spade_007", "status": "not_captured", "map": "north", "act": "four", "name": "Seven of Spades"},
+      { "id": "spade_008", "status": "not_captured", "map": "north", "act": "four", "name": "Eight of Spades"},
+      { "id": "spade_009", "status": "not_captured", "map": "north", "act": "four", "name": "Nine of Spades"},
+      { "id": "spade_010", "status": "not_captured", "map": "north", "act": "four", "name": "Ten of Spades"}
+    ]
   }
 }
