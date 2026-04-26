@@ -3,8 +3,19 @@ import { initInteractions } from "./interactions.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
 
-    const response = await fetch("data/collectibles.json");
-    const data = await response.json();
+    const [collectiblesRes, hvtsRes] = await Promise.all([
+        fetch("data/collectibles.json"),
+        fetch("data/HVTs.json")
+    ]);
+
+    const data = await collectiblesRes.json();
+    const hvtData = await hvtsRes.json();
+
+    // Merge HVT categories into data, tagging each as an HVT category
+    Object.keys(hvtData).forEach(category => {
+        hvtData[category].isHVT = true;
+        data[category] = hvtData[category];
+    });
 
     // Load saved state from localStorage
     const saved = localStorage.getItem("mercs-tracker");

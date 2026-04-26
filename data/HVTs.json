@@ -1,0 +1,38 @@
+{
+  "clubs": {
+    "displayName": "Clubs",
+    "items": [
+      { "id": "club_002", "status": "not_captured", "map": "south", "act": "one", "name": "Two of Clubs"},
+      { "id": "club_003", "status": "not_captured", "map": "south", "act": "one", "name": "Three of Clubs"},
+      { "id": "club_004", "status": "not_captured", "map": "south", "act": "one", "name": "Four of Clubs"},
+      { "id": "club_005", "status": "not_captured", "map": "south", "act": "one", "name": "Five of Clubs"},
+      { "id": "club_006", "status": "not_captured", "map": "south", "act": "one", "name": "Six of Clubs"},
+      { "id": "club_007", "status": "not_captured", "map": "south", "act": "one", "name": "Seven of Clubs"},
+      { "id": "club_008", "status": "not_captured", "map": "south", "act": "one", "name": "Eight of Clubs"},
+      { "id": "club_009", "status": "not_captured", "map": "south", "act": "one", "name": "Nine of Clubs"},
+      { "id": "club_010", "status": "not_captured", "map": "south", "act": "one", "name": "Ten of Clubs"}
+    ]
+  },
+  "diamonds": {
+    "displayName": "Diamonds",
+    "items": [
+      { "id": "dia_002", "status": "not_captured", "map": "south", "act": "two", "name": "Two of Diamonds"},
+      { "id": "dia_003", "status": "not_captured", "map": "south", "act": "two", "name": "Three of Diamonds"},
+      { "id": "dia_004", "status": "not_captured", "map": "south", "act": "two", "name": "Four of Diamonds"},
+      { "id": "dia_005", "status": "not_captured", "map": "south", "act": "two", "name": "Five of Diamonds"},
+      { "id": "dia_006", "status": "not_captured", "map": "south", "act": "two", "name": "Six of Diamonds"},
+      { "id": "dia_007", "status": "not_captured", "map": "south", "act": "two", "name": "Seven of Diamonds"},
+      { "id": "dia_008", "status": "not_captured", "map": "south", "act": "two", "name": "Eight of Diamonds"},
+      { "id": "dia_009", "status": "not_captured", "map": "south", "act": "two", "name": "Nine of Diamonds"},
+      { "id": "dia_010", "status": "not_captured", "map": "south", "act": "two", "name": "Ten of Diamonds"}
+    ]
+  },
+  "hearts": {
+    "displayName": "Hearts",
+    "items": []
+  },
+  "spades": {
+    "displayName": "Spades",
+    "items": []
+  }
+}

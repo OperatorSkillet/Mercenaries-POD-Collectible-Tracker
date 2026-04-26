@@ -85,6 +85,49 @@ svg {
 }
 
 /* ============================================================
+  MAP SWITCHER COLUMNS & ACT FILTER
+============================================================ */
+
+.map-switcher-col {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.act-filter {
+    display: flex;
+    border-top: 1px solid #333;
+}
+
+.act-btn {
+    flex: 1;
+    background: #111;
+    color: #666;
+    border: none;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.4px;
+    transition: background 0.2s, color 0.2s;
+    border-right: 1px solid #333;
+}
+
+.act-btn:last-child {
+    border-right: none;
+}
+
+.act-btn.active {
+    background: #2a2a2a;
+    color: #c8a000;
+}
+
+.act-btn:hover:not(.active) {
+    background: #1e1e1e;
+    color: #aaa;
+}
+
+/* ============================================================
   TRACKER BAR
 ============================================================ */
 
@@ -203,9 +246,11 @@ svg {
     background: #2a2a2a;
 }
 
-#sidebar-status[data-status="collected"] { color: #4caf50; }
-#sidebar-status[data-status="unsure"]    { color: #ffd900; }
+#sidebar-status[data-status="collected"]    { color: #4caf50; }
+#sidebar-status[data-status="captured"]     { color: #4caf50; }
+#sidebar-status[data-status="unsure"]       { color: #ffd900; }
 #sidebar-status[data-status="not_collected"] { color: #f44336; }
+#sidebar-status[data-status="not_captured"]  { color: #f44336; }
 
 #sidebar-image {
     width: 100%;
@@ -283,6 +328,11 @@ svg {
     paint-order: stroke;
     stroke: black;
     stroke-width: 2px;
+}
+
+/* HVT captured state — dims the card image like collected does for circles */
+.captured {
+    opacity: 0.4;
 }
 
 #map-container:active {
