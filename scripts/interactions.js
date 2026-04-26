@@ -293,10 +293,10 @@ export function initInteractions(data) {
             let total = 0;
             let done = 0;
             Object.values(data).forEach(category => {
-                const isHVT = !!category.isHVT;
+                if (category.isHVT) return;
                 const mapItems = category.items.filter(i => i.map === map);
                 total += mapItems.length;
-                done += mapItems.filter(i => isDone(i, isHVT)).length;
+                done += mapItems.filter(i => isDone(i, false)).length;
             });
             document.getElementById(`${map}-total`).textContent = `${done} / ${total}`;
         });
